@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Zap } from "lucide-react";
 
@@ -52,9 +53,9 @@ const Navbar = () => {
           <div className="hidden md:block">
             <Button 
               className="gradient-primary text-primary-foreground hover:opacity-90 transition-opacity glow-primary"
-              onClick={() => scrollToSection("#precios")}
+              asChild
             >
-              Ingreso
+              <Link to="/auth">Ingreso</Link>
             </Button>
           </div>
 
@@ -82,9 +83,9 @@ const Navbar = () => {
               ))}
               <Button 
                 className="gradient-primary text-primary-foreground hover:opacity-90 transition-opacity mt-2"
-                onClick={() => scrollToSection("#precios")}
+                asChild
               >
-                Ingreso
+                <Link to="/auth">Ingreso</Link>
               </Button>
             </div>
           </div>
