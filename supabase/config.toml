@@ -1,1 +1,7 @@
 project_id = "cnklvgsbdftiqzdshvmd"
+
+[functions.meta-oauth-start]
+verify_jwt = false
+
+[functions.meta-oauth-callback]
+verify_jwt = false

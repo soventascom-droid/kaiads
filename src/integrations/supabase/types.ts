@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      meta_ads_tokens: {
+        Row: {
+          access_token: string
+          ad_account_id: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          token_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          ad_account_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          token_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          ad_account_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          token_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
