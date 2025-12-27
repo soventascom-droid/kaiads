@@ -32,9 +32,9 @@ serve(async (req) => {
     // Required scopes for Meta Ads
     const scopes = [
       'ads_management',
+      'ads_read',
       'business_management', 
-      'pages_read_engagement',
-      'read_insights'
+      'pages_read_engagement'
     ].join(',');
 
     // Build Facebook OAuth URL
