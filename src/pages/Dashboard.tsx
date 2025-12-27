@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { 
   LayoutDashboard, 
   Link as LinkIcon, 
@@ -18,13 +19,17 @@ import {
   Sparkles,
   Shield,
   Settings,
-  Users
+  Users,
+  CheckCircle2,
+  Facebook
 } from 'lucide-react';
 
 const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState<string>('trial');
+  const [isMetaConnected, setIsMetaConnected] = useState(false);
+  const [connectingMeta, setConnectingMeta] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,6 +55,49 @@ const Dashboard = () => {
     };
     checkUserRole();
   }, [user]);
+
+  // Check if Meta Ads is connected
+  useEffect(() => {
+    const checkMetaConnection = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('meta_ads_tokens')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        setIsMetaConnected(!!data);
+      }
+    };
+    checkMetaConnection();
+  }, [user]);
+
+  const handleConnectMeta = async () => {
+    if (!user) return;
+    
+    setConnectingMeta(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-oauth-start', {
+        body: { state: user.id }
+      });
+
+      if (error) {
+        console.error('Error starting Meta OAuth:', error);
+        toast.error('Error al iniciar conexión con Meta');
+        return;
+      }
+
+      if (data?.authUrl) {
+        // Redirect to Facebook OAuth - FULL PAGE redirect, not iframe
+        window.location.href = data.authUrl;
+      }
+    } catch (err) {
+      console.error('Error connecting to Meta:', err);
+      toast.error('Error al conectar con Meta Ads');
+    } finally {
+      setConnectingMeta(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -199,9 +247,49 @@ const Dashboard = () => {
             </p>
           </header>
 
+          {/* Meta Ads Connection Card */}
+          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 mb-8" id="connect">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center">
+                  <Facebook className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Conectar Meta Ads</h3>
+                  <p className="text-muted-foreground text-sm">
+                    {isMetaConnected 
+                      ? 'Tu cuenta de Meta Ads está conectada' 
+                      : 'Conecta tu cuenta para gestionar campañas'}
+                  </p>
+                </div>
+              </div>
+              {isMetaConnected ? (
+                <div className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-full">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="font-medium">Conectado</span>
+                </div>
+              ) : (
+                <Button 
+                  onClick={handleConnectMeta}
+                  disabled={connectingMeta}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {connectingMeta ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Conectando...
+                    </>
+                  ) : (
+                    'Conectar cuenta'
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {menuItems.map((item) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {menuItems.filter(item => item.href !== '#connect').map((item) => (
               <a
                 key={item.label}
                 href={item.href}
