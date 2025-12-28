@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import BusinessConfigModal from '@/components/BusinessConfigModal';
 import { 
   LayoutDashboard, 
   Link as LinkIcon, 
@@ -21,7 +22,8 @@ import {
   Settings,
   Users,
   CheckCircle2,
-  Facebook
+  Facebook,
+  Lock
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -29,7 +31,9 @@ const Dashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState<string>('trial');
   const [isMetaConnected, setIsMetaConnected] = useState(false);
+  const [isBusinessConfigured, setIsBusinessConfigured] = useState(false);
   const [connectingMeta, setConnectingMeta] = useState(false);
+  const [configModalOpen, setConfigModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -72,6 +76,22 @@ const Dashboard = () => {
     checkMetaConnection();
   }, [user]);
 
+  // Check if business is configured
+  useEffect(() => {
+    const checkBusinessConfig = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('business_configurations')
+          .select('is_configured')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        setIsBusinessConfigured(data?.is_configured || false);
+      }
+    };
+    checkBusinessConfig();
+  }, [user]);
+
   const handleConnectMeta = async () => {
     if (!user) return;
     
@@ -88,7 +108,6 @@ const Dashboard = () => {
       }
 
       if (data?.authUrl) {
-        // Redirect to Facebook OAuth - FULL PAGE redirect, not iframe
         window.location.href = data.authUrl;
       }
     } catch (err) {
@@ -97,6 +116,10 @@ const Dashboard = () => {
     } finally {
       setConnectingMeta(false);
     }
+  };
+
+  const handleConfigSaved = () => {
+    setIsBusinessConfigured(true);
   };
 
   const handleSignOut = async () => {
@@ -117,10 +140,10 @@ const Dashboard = () => {
   }
 
   const menuItems = [
-    { icon: LinkIcon, label: 'Conectar cuenta', href: '#connect' },
-    { icon: Building2, label: 'Configurar empresa', href: '#configure' },
-    { icon: Megaphone, label: 'Campañas de venta', href: '#campaigns' },
-    { icon: BarChart3, label: 'Estrategias activas', href: '#strategies' },
+    { icon: LinkIcon, label: 'Conectar cuenta', href: '#connect', locked: false },
+    { icon: Building2, label: 'Configurar empresa', href: '/configure-company', locked: !isBusinessConfigured },
+    { icon: Megaphone, label: 'Campañas de venta', href: '#campaigns', locked: true },
+    { icon: BarChart3, label: 'Estrategias activas', href: '#strategies', locked: true },
   ];
 
   const adminItems = [
@@ -156,17 +179,39 @@ const Dashboard = () => {
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-3">
             Menú
           </p>
-          {menuItems.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all group"
-            >
-              <item.icon className="w-5 h-5 group-hover:text-primary transition-colors" />
-              <span>{item.label}</span>
-              <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-            </a>
-          ))}
+          {menuItems.map((item) => {
+            const isLocked = item.locked;
+            const handleClick = (e: React.MouseEvent) => {
+              if (isLocked) {
+                e.preventDefault();
+                toast.info('Completa la configuración de empresa primero');
+              } else if (item.href.startsWith('/')) {
+                e.preventDefault();
+                navigate(item.href);
+              }
+            };
+            
+            return (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={handleClick}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group ${
+                  isLocked 
+                    ? 'text-muted-foreground/50 cursor-not-allowed' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-primary/10'
+                }`}
+              >
+                <item.icon className={`w-5 h-5 ${!isLocked && 'group-hover:text-primary'} transition-colors`} />
+                <span>{item.label}</span>
+                {isLocked ? (
+                  <Lock className="w-4 h-4 ml-auto text-muted-foreground/50" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
+              </a>
+            );
+          })}
 
           {/* Admin Section */}
           {isAdmin && (
@@ -248,7 +293,7 @@ const Dashboard = () => {
           </header>
 
           {/* Meta Ads Connection Card */}
-          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 mb-8" id="connect">
+          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 mb-6" id="connect">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center">
@@ -286,6 +331,43 @@ const Dashboard = () => {
               )}
             </div>
           </div>
+
+          {/* Business Configuration Card - Only shown when Meta is connected */}
+          {isMetaConnected && (
+            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 mb-8" id="configure">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                    <Building2 className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Configuración de la Empresa</h3>
+                    <p className="text-muted-foreground text-sm">
+                      {isBusinessConfigured 
+                        ? 'Tu empresa está configurada correctamente' 
+                        : 'Selecciona tus activos de Meta para continuar'}
+                    </p>
+                  </div>
+                </div>
+                {isBusinessConfigured ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-full">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span className="font-medium">Configurado</span>
+                    </div>
+                    <Button variant="outline" onClick={() => setConfigModalOpen(true)}>
+                      Editar
+                    </Button>
+                  </div>
+                ) : (
+                  <Button onClick={() => setConfigModalOpen(true)}>
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Completar configuración de la empresa
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -340,6 +422,13 @@ const Dashboard = () => {
           )}
         </div>
       </main>
+
+      {/* Business Config Modal */}
+      <BusinessConfigModal 
+        open={configModalOpen} 
+        onOpenChange={setConfigModalOpen}
+        onConfigSaved={handleConfigSaved}
+      />
     </div>
   );
 };

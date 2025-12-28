@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.meta-oauth-callback]
 verify_jwt = false
+
+[functions.meta-fetch-assets]
+verify_jwt = false

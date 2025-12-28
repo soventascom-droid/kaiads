@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_configurations: {
+        Row: {
+          ad_account_id: string | null
+          ad_account_name: string | null
+          business_manager_id: string | null
+          business_manager_name: string | null
+          created_at: string
+          facebook_page_id: string | null
+          facebook_page_name: string | null
+          id: string
+          is_configured: boolean
+          pixel_id: string | null
+          pixel_name: string | null
+          updated_at: string
+          user_id: string
+          website_url: string | null
+          whatsapp_account_id: string | null
+          whatsapp_phone: string | null
+        }
+        Insert: {
+          ad_account_id?: string | null
+          ad_account_name?: string | null
+          business_manager_id?: string | null
+          business_manager_name?: string | null
+          created_at?: string
+          facebook_page_id?: string | null
+          facebook_page_name?: string | null
+          id?: string
+          is_configured?: boolean
+          pixel_id?: string | null
+          pixel_name?: string | null
+          updated_at?: string
+          user_id: string
+          website_url?: string | null
+          whatsapp_account_id?: string | null
+          whatsapp_phone?: string | null
+        }
+        Update: {
+          ad_account_id?: string | null
+          ad_account_name?: string | null
+          business_manager_id?: string | null
+          business_manager_name?: string | null
+          created_at?: string
+          facebook_page_id?: string | null
+          facebook_page_name?: string | null
+          id?: string
+          is_configured?: boolean
+          pixel_id?: string | null
+          pixel_name?: string | null
+          updated_at?: string
+          user_id?: string
+          website_url?: string | null
+          whatsapp_account_id?: string | null
+          whatsapp_phone?: string | null
+        }
+        Relationships: []
+      }
       meta_ads_tokens: {
         Row: {
           access_token: string
