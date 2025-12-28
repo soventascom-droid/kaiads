@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import BusinessConfigModal from '@/components/BusinessConfigModal';
+import MetaAccountSlot from '@/components/MetaAccountSlot';
 import { 
   LayoutDashboard, 
   Link as LinkIcon, 
@@ -21,10 +20,9 @@ import {
   Shield,
   Settings,
   Users,
-  CheckCircle2,
-  Facebook,
   Lock
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
@@ -33,7 +31,6 @@ const Dashboard = () => {
   const [isMetaConnected, setIsMetaConnected] = useState(false);
   const [isBusinessConfigured, setIsBusinessConfigured] = useState(false);
   const [connectingMeta, setConnectingMeta] = useState(false);
-  const [configModalOpen, setConfigModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -116,6 +113,11 @@ const Dashboard = () => {
     } finally {
       setConnectingMeta(false);
     }
+  };
+
+  const handleDisconnect = () => {
+    setIsMetaConnected(false);
+    setIsBusinessConfigured(false);
   };
 
   const handleConfigSaved = () => {
@@ -282,153 +284,112 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <header className="mb-8">
-            <h1 className="text-3xl font-bold">
-              ¡Bienvenido, {user.user_metadata?.full_name?.split(' ')[0] || 'Usuario'}!
-            </h1>
+            <h1 className="text-3xl font-bold">Conectar Cuentas de Meta</h1>
             <p className="text-muted-foreground mt-2">
-              Estás en el tablero de control de Kai Ads Pro
+              Gestiona tus cuentas de Meta Ads. Puedes conectar hasta 3 cuentas.
             </p>
           </header>
 
-          {/* Meta Ads Connection Card */}
-          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 mb-6" id="connect">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center">
-                  <Facebook className="w-8 h-8 text-white" />
+          {/* Account Slots */}
+          <div className="space-y-4" id="connect">
+            {/* Slot 1 - Active */}
+            <MetaAccountSlot
+              slotNumber={1}
+              isConnected={isMetaConnected}
+              onConnectMeta={handleConnectMeta}
+              onDisconnect={handleDisconnect}
+              onConfigSaved={handleConfigSaved}
+              connecting={connectingMeta}
+            />
+
+            {/* Slot 2 - Disabled for now */}
+            <div className="bg-card/30 backdrop-blur-sm border border-border/30 rounded-xl p-6 opacity-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center">
+                    <LinkIcon className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg text-muted-foreground">Cuenta Meta #2</h3>
+                    <p className="text-muted-foreground text-sm">Próximamente disponible</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-lg">Conectar Meta Ads</h3>
-                  <p className="text-muted-foreground text-sm">
-                    {isMetaConnected 
-                      ? 'Tu cuenta de Meta Ads está conectada' 
-                      : 'Conecta tu cuenta para gestionar campañas'}
-                  </p>
-                </div>
+                <Lock className="w-5 h-5 text-muted-foreground" />
               </div>
-              {isMetaConnected ? (
-                <div className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-full">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="font-medium">Conectado</span>
+            </div>
+
+            {/* Slot 3 - Disabled for now */}
+            <div className="bg-card/30 backdrop-blur-sm border border-border/30 rounded-xl p-6 opacity-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center">
+                    <LinkIcon className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg text-muted-foreground">Cuenta Meta #3</h3>
+                    <p className="text-muted-foreground text-sm">Próximamente disponible</p>
+                  </div>
                 </div>
-              ) : (
-                <Button 
-                  onClick={handleConnectMeta}
-                  disabled={connectingMeta}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {connectingMeta ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Conectando...
-                    </>
-                  ) : (
-                    'Conectar cuenta'
-                  )}
-                </Button>
-              )}
+                <Lock className="w-5 h-5 text-muted-foreground" />
+              </div>
             </div>
           </div>
 
-          {/* Business Configuration Card - Only shown when Meta is connected */}
-          {isMetaConnected && (
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 mb-8" id="configure">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                    <Building2 className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">Configuración de la Empresa</h3>
-                    <p className="text-muted-foreground text-sm">
-                      {isBusinessConfigured 
-                        ? 'Tu empresa está configurada correctamente' 
-                        : 'Selecciona tus activos de Meta para continuar'}
-                    </p>
-                  </div>
-                </div>
-                {isBusinessConfigured ? (
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-full">
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span className="font-medium">Configurado</span>
-                    </div>
-                    <Button variant="outline" onClick={() => setConfigModalOpen(true)}>
-                      Editar
-                    </Button>
-                  </div>
-                ) : (
-                  <Button onClick={() => setConfigModalOpen(true)}>
-                    <Building2 className="w-4 h-4 mr-2" />
-                    Completar configuración de la empresa
-                  </Button>
-                )}
+          {/* Info Banner */}
+          <div className="mt-8 bg-primary/10 border border-primary/20 rounded-xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Importante</h3>
+                <p className="text-muted-foreground text-sm">
+                  Después de conectar tu cuenta y guardar la configuración, se desbloqueará la opción 
+                  <strong className="text-foreground"> "Configurar empresa"</strong> en el menú lateral, 
+                  donde podrás definir la estrategia de marketing de tu negocio.
+                </p>
               </div>
             </div>
-          )}
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            {menuItems.filter(item => item.href !== '#connect').map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 hover:border-primary/50 hover:bg-primary/5 transition-all group"
-              >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-4 group-hover:from-primary/30 group-hover:to-accent/30 transition-colors">
-                  <item.icon className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="font-semibold">{item.label}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Haz clic para comenzar
-                </p>
-              </a>
-            ))}
           </div>
 
           {/* Admin/Trial Banner */}
-          {isAdmin ? (
-            <div className="bg-gradient-to-r from-amber-500/20 via-amber-600/20 to-amber-500/20 border border-amber-500/30 rounded-xl p-6 flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-lg flex items-center gap-2 text-amber-400">
-                  <Shield className="w-5 h-5" />
-                  Modo Administrador
-                </h3>
-                <p className="text-muted-foreground mt-1">
-                  Tienes acceso completo a todas las funcionalidades
-                </p>
+          <div className="mt-6">
+            {isAdmin ? (
+              <div className="bg-gradient-to-r from-amber-500/20 via-amber-600/20 to-amber-500/20 border border-amber-500/30 rounded-xl p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-lg flex items-center gap-2 text-amber-400">
+                    <Shield className="w-5 h-5" />
+                    Modo Administrador
+                  </h3>
+                  <p className="text-muted-foreground mt-1">
+                    Tienes acceso completo a todas las funcionalidades
+                  </p>
+                </div>
+                <span className="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-full font-semibold">
+                  Acceso Total
+                </span>
               </div>
-              <span className="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-full font-semibold">
-                Acceso Total
-              </span>
-            </div>
-          ) : (
-            <div className="bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 border border-primary/30 rounded-xl p-6 flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-lg flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  Estás en modo de prueba
-                </h3>
-                <p className="text-muted-foreground mt-1">
-                  Actualiza a Pro para desbloquear todas las funcionalidades
-                </p>
+            ) : (
+              <div className="bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 border border-primary/30 rounded-xl p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    Estás en modo de prueba
+                  </h3>
+                  <p className="text-muted-foreground mt-1">
+                    Actualiza a Pro para desbloquear todas las funcionalidades
+                  </p>
+                </div>
+                <Button className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
+                  Ser Pro
+                </Button>
               </div>
-              <Button className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
-                Ser Pro
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </main>
-
-      {/* Business Config Modal */}
-      <BusinessConfigModal 
-        open={configModalOpen} 
-        onOpenChange={setConfigModalOpen}
-        onConfigSaved={handleConfigSaved}
-      />
     </div>
   );
 };
