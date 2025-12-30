@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,6 @@ import {
   Upload, Globe, Target, 
   Palette, TrendingUp, Users, Sparkles, 
   FileText, BarChart3, Eye,
-  LayoutDashboard, 
   Link as LinkIcon, 
   Building2, 
   Megaphone, 
@@ -25,24 +24,91 @@ import {
   ChevronRight,
   Shield,
   Settings,
-  Lock
+  Lock,
+  CheckCircle2,
+  Trash2,
+  Save,
+  Search
 } from 'lucide-react';
 
-// Mock data for visual purposes
+// Mock accounts with configuration status
 const mockAccounts = [
-  { id: '1', name: 'Mi Negocio Principal' },
-  { id: '2', name: 'Tienda Online' },
+  { id: '1', name: 'Cuenta 1', hasData: true },
+  { id: '2', name: 'Cuenta 2', hasData: false },
+  { id: '3', name: 'Cuenta 3', hasData: false },
+];
+
+// Mock results data
+const mockResultsData = {
+  presentacion: {
+    nombre: 'TechFlow Solutions',
+    venta: 'Software de automatización empresarial para PyMEs que buscan optimizar sus procesos operativos.',
+    atractivo: 'Interfaz intuitiva que reduce el tiempo de implementación en un 60%.',
+    unicidad: 'Único sistema que integra IA predictiva con automatización de flujos de trabajo.',
+    ventajas: 'Soporte 24/7, actualizaciones gratuitas, integración con +50 herramientas.'
+  },
+  publico: {
+    problemas: 'Pérdida de tiempo en tareas repetitivas, errores humanos en procesos, falta de visibilidad de métricas clave.',
+    intereses: 'Productividad, Tecnología, Emprendimiento, Eficiencia operativa',
+    paises: 'Colombia, México, Argentina, Chile, Perú'
+  },
+  valorAgregado: {
+    palabrasClave: 'automatización, eficiencia, innovación, productividad, resultados',
+    frases: '"Automatiza hoy, crece mañana", "Tu tiempo vale más", "Resultados en semanas, no meses"'
+  },
+  identidadVisual: {
+    paletaActual: ['#6366f1', '#8b5cf6', '#a855f7', '#3b82f6'],
+    paletaRecomendada: ['#10b981', '#06b6d4', '#6366f1', '#f59e0b'],
+    estilo: 'Moderno, Tecnológico, Profesional',
+    tema: 'Minimalista con acentos vibrantes'
+  },
+  analisisRedes: {
+    contenidoTop: 'Videos explicativos, Casos de éxito, Tips rápidos, Webinars',
+    probabilidadExito: '82%',
+    competencia: 'Media-Alta (12 competidores directos identificados)'
+  },
+  estrategia: {
+    objetivo: 'Generación de leads calificados con enfoque en demos gratuitas',
+    cta: '"Agenda tu demo gratuita" / "Prueba 14 días gratis"',
+    perfilVenta: 'Gerentes y directores de operaciones, 30-50 años, empresas 10-200 empleados'
+  }
+};
+
+const loadingMessages = [
+  'La IA de KAI está trabajando...',
+  'Analizando información del negocio...',
+  'Identificando público objetivo...',
+  'Generando estrategia de marketing...',
+  'Analizando competencia...',
+  'Finalizando análisis...'
 ];
 
 const ConfigureCompany = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [selectedAccount, setSelectedAccount] = useState('1');
-  const [showResults, setShowResults] = useState(false);
-  const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState<string>('trial');
   const [isBusinessConfigured, setIsBusinessConfigured] = useState(false);
+  
+  // Wizard states
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  
+  // Loading modal
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [processingComplete, setProcessingComplete] = useState(false);
+  
+  // Account data state (simulated)
+  const [accountsData, setAccountsData] = useState<Record<string, boolean>>({
+    '1': true, // Cuenta 1 has data
+    '2': false,
+    '3': false
+  });
+
+  const currentAccountHasData = accountsData[selectedAccount] || false;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -83,13 +149,67 @@ const ConfigureCompany = () => {
     checkBusinessConfig();
   }, [user]);
 
+  // Loading animation effect
+  useEffect(() => {
+    if (isProcessing && !processingComplete) {
+      const interval = setInterval(() => {
+        setLoadingMessageIndex(prev => {
+          if (prev < loadingMessages.length - 1) {
+            return prev + 1;
+          }
+          return prev;
+        });
+      }, 700);
+      
+      // Complete after 4 seconds
+      const timeout = setTimeout(() => {
+        setProcessingComplete(true);
+        setTimeout(() => {
+          setIsProcessing(false);
+          setProcessingComplete(false);
+          setLoadingMessageIndex(0);
+          setAccountsData(prev => ({ ...prev, [selectedAccount]: true }));
+          toast.success('Análisis completado exitosamente');
+        }, 1000);
+      }, 4000);
+      
+      return () => {
+        clearInterval(interval);
+        clearTimeout(timeout);
+      };
+    }
+  }, [isProcessing, processingComplete, selectedAccount]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
 
-  const handleAnalyze = () => {
-    setShowResults(true);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+    }
+  };
+
+  const handleConfigure = () => {
+    if (!selectedCountry) {
+      toast.error('Por favor selecciona un país');
+      return;
+    }
+    setIsProcessing(true);
+  };
+
+  const handleDeleteData = () => {
+    setAccountsData(prev => ({ ...prev, [selectedAccount]: false }));
+    setUploadedFile(null);
+    setSelectedCountry('');
+    setSelectedCity('');
+    toast.success('Información eliminada correctamente');
+  };
+
+  const handleSave = () => {
+    toast.success('Configuración guardada correctamente');
   };
 
   if (loading) {
@@ -121,6 +241,16 @@ const ConfigureCompany = () => {
     { icon: CreditCard, label: 'Facturación', href: '#billing' },
     { icon: Bell, label: 'Novedades', href: '#news' },
   ];
+
+  const countries = [
+    { code: 'co', name: 'Colombia', cities: ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena'] },
+    { code: 'mx', name: 'México', cities: ['Ciudad de México', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana'] },
+    { code: 'ar', name: 'Argentina', cities: ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'La Plata'] },
+    { code: 'es', name: 'España', cities: ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao'] },
+    { code: 'us', name: 'Estados Unidos', cities: ['Nueva York', 'Los Angeles', 'Chicago', 'Miami', 'Houston'] },
+  ];
+
+  const selectedCountryData = countries.find(c => c.code === selectedCountry);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -250,270 +380,349 @@ const ConfigureCompany = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-8 overflow-auto">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           {/* Header */}
           <header className="mb-8">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold">Configuración de Empresa</h1>
-                <p className="text-muted-foreground mt-2">
-                  Sube la información de tu negocio para que la IA genere tu estrategia
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold">Configurar Empresa</h1>
+                  <p className="text-muted-foreground">
+                    Sube la información de tu negocio para que la IA genere tu estrategia
+                  </p>
+                </div>
               </div>
               {/* Account Selector */}
               <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                <SelectTrigger className="w-64 h-12">
+                <SelectTrigger className="w-48 h-12">
                   <SelectValue placeholder="Seleccionar cuenta" />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
                   {mockAccounts.map(acc => (
-                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                    <SelectItem key={acc.id} value={acc.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{acc.name}</span>
+                        {accountsData[acc.id] && (
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                        )}
+                      </div>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </header>
 
-          {!showResults ? (
-            <div className="space-y-6">
-              {/* PDF Upload Card */}
+          {/* STATE 1: Loading Form */}
+          {!currentAccountHasData ? (
+            <div className="space-y-6 animate-fade-in">
+              {/* Card A: Document Requirements */}
               <Card className="bg-card/50 backdrop-blur-sm border-border/50">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-primary" />
-                    Información de la Empresa
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <FileText className="w-6 h-6 text-primary" />
+                    Requisitos del Documento
                   </CardTitle>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Para un análisis óptimo, tu documento debe incluir información sobre:
+                  </p>
                 </CardHeader>
-                <CardContent>
-                  <div className="border-2 border-dashed border-primary/30 rounded-xl p-8 text-center bg-primary/5">
-                    <Dialog open={pdfModalOpen} onOpenChange={setPdfModalOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="lg" className="gap-3 text-lg px-8 h-14">
-                          <Upload className="w-6 h-6" />
-                          Cargar información de mi empresa (PDF)
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-lg bg-card border-border">
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-primary" />
-                            Requisitos del Documento
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <p className="text-muted-foreground">
-                            Para un análisis óptimo, tu documento debe incluir información sobre:
-                          </p>
-                          <ul className="space-y-3">
-                            <li className="flex items-start gap-3">
-                              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span className="text-xs font-bold text-primary">1</span>
-                              </div>
-                              <span><strong>Diferenciación:</strong> ¿Qué te hace único frente a la competencia?</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span className="text-xs font-bold text-primary">2</span>
-                              </div>
-                              <span><strong>Cliente ideal:</strong> ¿A quién le vendes principalmente?</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span className="text-xs font-bold text-primary">3</span>
-                              </div>
-                              <span><strong>Problema:</strong> ¿Qué problema resuelves para tus clientes?</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span className="text-xs font-bold text-primary">4</span>
-                              </div>
-                              <span><strong>Producto/Servicio:</strong> ¿Qué ofreces exactamente?</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span className="text-xs font-bold text-primary">5</span>
-                              </div>
-                              <span><strong>Tono de comunicación:</strong> ¿Cómo hablas con tus clientes?</span>
-                            </li>
-                          </ul>
-                          <div className="pt-4 border-t border-border">
-                            <Label htmlFor="pdf-upload" className="text-sm font-medium">Subir archivo PDF</Label>
-                            <div className="mt-2 flex gap-3">
-                              <Input id="pdf-upload" type="file" accept=".pdf" className="flex-1 h-12" />
-                              <Button className="h-12" onClick={() => setPdfModalOpen(false)}>
-                                <Upload className="w-4 h-4 mr-2" />
-                                Subir
-                              </Button>
-                            </div>
-                          </div>
+                <CardContent className="space-y-6">
+                  {/* Checklist */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                      <span className="text-sm">¿Qué te hace único frente a la competencia?</span>
+                    </div>
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                      <span className="text-sm">¿A quién le vendes principalmente?</span>
+                    </div>
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                      <span className="text-sm">¿Qué problema resuelves?</span>
+                    </div>
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                      <span className="text-sm">¿Qué ofreces exactamente?</span>
+                    </div>
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 md:col-span-2 md:w-1/2">
+                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                      <span className="text-sm">¿Cómo hablas con tus clientes?</span>
+                    </div>
+                  </div>
+
+                  {/* File Upload */}
+                  <div className="border-2 border-dashed border-primary/30 rounded-xl p-6 bg-primary/5 transition-all hover:border-primary/50 hover:bg-primary/10">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Upload className="w-8 h-8 text-primary" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-medium">Arrastra tu archivo PDF aquí</p>
+                        <p className="text-sm text-muted-foreground">o haz clic para seleccionar</p>
+                      </div>
+                      <Input
+                        type="file"
+                        accept=".pdf"
+                        onChange={handleFileChange}
+                        className="max-w-xs h-12 cursor-pointer"
+                      />
+                      {uploadedFile && (
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 text-green-400">
+                          <FileText className="w-4 h-4" />
+                          <span className="text-sm font-medium">{uploadedFile.name}</span>
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                    <p className="text-muted-foreground mt-4">
-                      Sube un documento con información de tu negocio para un análisis más preciso
-                    </p>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Segmentation Card */}
+              {/* Card B: Geographic Segmentation */}
               <Card className="bg-card/50 backdrop-blur-sm border-border/50">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="w-5 h-5 text-primary" />
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Globe className="w-6 h-6 text-accent" />
                     Segmentación Geográfica
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Country Select */}
                     <div className="space-y-2">
-                      <Label>País</Label>
-                      <Select defaultValue="co">
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Seleccionar país" />
+                      <Label className="text-sm font-medium">País</Label>
+                      <Select value={selectedCountry} onValueChange={(val) => {
+                        setSelectedCountry(val);
+                        setSelectedCity('');
+                      }}>
+                        <SelectTrigger className="h-12 w-full">
+                          <div className="flex items-center gap-2">
+                            <Search className="w-4 h-4 text-muted-foreground" />
+                            <SelectValue placeholder="Buscar país..." />
+                          </div>
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border">
-                          <SelectItem value="co">Colombia</SelectItem>
-                          <SelectItem value="mx">México</SelectItem>
-                          <SelectItem value="ar">Argentina</SelectItem>
-                          <SelectItem value="es">España</SelectItem>
-                          <SelectItem value="us">Estados Unidos</SelectItem>
+                          {countries.map(country => (
+                            <SelectItem key={country.code} value={country.code}>
+                              {country.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* City Select */}
                     <div className="space-y-2">
-                      <Label>Ciudad</Label>
-                      <Select defaultValue="bog">
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Seleccionar ciudad" />
+                      <Label className="text-sm font-medium">Ciudad</Label>
+                      <Select 
+                        value={selectedCity} 
+                        onValueChange={setSelectedCity}
+                        disabled={!selectedCountry}
+                      >
+                        <SelectTrigger className={`h-12 w-full ${!selectedCountry ? 'opacity-50' : ''}`}>
+                          <div className="flex items-center gap-2">
+                            <Search className="w-4 h-4 text-muted-foreground" />
+                            <SelectValue placeholder={selectedCountry ? "Seleccionar ciudad..." : "Primero selecciona un país"} />
+                          </div>
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border">
-                          <SelectItem value="bog">Bogotá</SelectItem>
-                          <SelectItem value="med">Medellín</SelectItem>
-                          <SelectItem value="cal">Cali</SelectItem>
-                          <SelectItem value="bar">Barranquilla</SelectItem>
+                          {selectedCountryData?.cities.map(city => (
+                            <SelectItem key={city} value={city}>
+                              {city}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
-                  <Button size="lg" className="w-full h-14 text-lg mt-4" onClick={handleAnalyze}>
-                    <Sparkles className="w-5 h-5 mr-2" />
-                    ANALIZAR
-                  </Button>
                 </CardContent>
               </Card>
+
+              {/* Main Action Button */}
+              <Button 
+                size="lg" 
+                className="w-full h-16 text-xl font-bold bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+                onClick={handleConfigure}
+              >
+                <Sparkles className="w-6 h-6 mr-3" />
+                CONFIGURAR
+              </Button>
             </div>
           ) : (
-            /* Results Dashboard - Mock */
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Resultados del Análisis</h2>
-                <Button variant="outline" onClick={() => setShowResults(false)}>
-                  Volver
-                </Button>
-              </div>
-
+            /* STATE 2: Results Dashboard */
+            <div className="space-y-6 animate-fade-in">
+              {/* Results Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* A. PRESENTACIÓN */}
-                <Card className="bg-card/50 backdrop-blur-sm border-primary/30">
+                <Card className="bg-gray-900/50 backdrop-blur-sm border-primary/30 hover:border-primary/50 transition-all">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Eye className="w-5 h-5 text-primary" />
-                      A. PRESENTACIÓN
+                    <CardTitle className="text-lg flex items-center gap-2 text-primary">
+                      <Eye className="w-5 h-5" />
+                      PRESENTACIÓN
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
-                    <div><strong>Nombre:</strong> Mi Empresa S.A.S</div>
-                    <div><strong>Venta:</strong> Lorem ipsum dolor sit amet consectetur adipiscing elit.</div>
-                    <div><strong>Atractivo:</strong> Sed do eiusmod tempor incididunt ut labore.</div>
-                    <div><strong>Unicidad:</strong> Ut enim ad minim veniam quis nostrud.</div>
-                    <div><strong>Ventajas:</strong> Excepteur sint occaecat cupidatat non proident.</div>
+                    <div><span className="text-muted-foreground">Nombre:</span> <span className="text-foreground font-medium">{mockResultsData.presentacion.nombre}</span></div>
+                    <div><span className="text-muted-foreground">Qué vende:</span> <span className="text-foreground">{mockResultsData.presentacion.venta}</span></div>
+                    <div><span className="text-muted-foreground">Atractivo:</span> <span className="text-foreground">{mockResultsData.presentacion.atractivo}</span></div>
+                    <div><span className="text-muted-foreground">Unicidad:</span> <span className="text-foreground">{mockResultsData.presentacion.unicidad}</span></div>
+                    <div><span className="text-muted-foreground">Ventajas:</span> <span className="text-foreground">{mockResultsData.presentacion.ventajas}</span></div>
                   </CardContent>
                 </Card>
 
                 {/* B. PÚBLICO */}
-                <Card className="bg-card/50 backdrop-blur-sm border-accent/30">
+                <Card className="bg-gray-900/50 backdrop-blur-sm border-accent/30 hover:border-accent/50 transition-all">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Users className="w-5 h-5 text-accent" />
-                      B. PÚBLICO
+                    <CardTitle className="text-lg flex items-center gap-2 text-accent">
+                      <Users className="w-5 h-5" />
+                      PÚBLICO
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
-                    <div><strong>Problemas:</strong> Duis aute irure dolor in reprehenderit in voluptate.</div>
-                    <div><strong>Intereses:</strong> Fitness, Tecnología, Emprendimiento, Viajes</div>
-                    <div><strong>Países:</strong> Colombia, México, Argentina, España</div>
+                    <div><span className="text-muted-foreground">Problemas:</span> <span className="text-foreground">{mockResultsData.publico.problemas}</span></div>
+                    <div><span className="text-muted-foreground">Intereses:</span> <span className="text-foreground">{mockResultsData.publico.intereses}</span></div>
+                    <div><span className="text-muted-foreground">Países impacto:</span> <span className="text-foreground">{mockResultsData.publico.paises}</span></div>
                   </CardContent>
                 </Card>
 
                 {/* C. VALOR AGREGADO */}
-                <Card className="bg-card/50 backdrop-blur-sm border-green-500/30">
+                <Card className="bg-gray-900/50 backdrop-blur-sm border-green-500/30 hover:border-green-500/50 transition-all">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-green-500" />
-                      C. VALOR AGREGADO
+                    <CardTitle className="text-lg flex items-center gap-2 text-green-500">
+                      <Sparkles className="w-5 h-5" />
+                      VALOR AGREGADO
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
-                    <div><strong>Palabras clave:</strong> innovación, calidad, confianza, resultados</div>
-                    <div><strong>Frases:</strong> "Transforma tu negocio", "Resultados garantizados", "Expertos en tu industria"</div>
+                    <div><span className="text-muted-foreground">Palabras clave:</span> <span className="text-foreground">{mockResultsData.valorAgregado.palabrasClave}</span></div>
+                    <div><span className="text-muted-foreground">Frases inspiradoras:</span> <span className="text-foreground italic">{mockResultsData.valorAgregado.frases}</span></div>
                   </CardContent>
                 </Card>
 
                 {/* D. IDENTIDAD VISUAL */}
-                <Card className="bg-card/50 backdrop-blur-sm border-purple-500/30">
+                <Card className="bg-gray-900/50 backdrop-blur-sm border-purple-500/30 hover:border-purple-500/50 transition-all">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Palette className="w-5 h-5 text-purple-500" />
-                      D. IDENTIDAD VISUAL
+                    <CardTitle className="text-lg flex items-center gap-2 text-purple-500">
+                      <Palette className="w-5 h-5" />
+                      IDENTIDAD VISUAL
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
-                    <div><strong>Paletas de color:</strong></div>
-                    <div className="flex gap-2">
-                      <div className="w-8 h-8 rounded bg-blue-500" />
-                      <div className="w-8 h-8 rounded bg-purple-500" />
-                      <div className="w-8 h-8 rounded bg-pink-500" />
-                      <div className="w-8 h-8 rounded bg-orange-500" />
+                    <div>
+                      <span className="text-muted-foreground">Paleta actual:</span>
+                      <div className="flex gap-2 mt-1">
+                        {mockResultsData.identidadVisual.paletaActual.map((color, i) => (
+                          <div key={i} className="w-8 h-8 rounded-lg shadow-inner" style={{ backgroundColor: color }} />
+                        ))}
+                      </div>
                     </div>
-                    <div><strong>Estilo:</strong> Moderno, Minimalista, Profesional</div>
+                    <div>
+                      <span className="text-muted-foreground">Paleta recomendada:</span>
+                      <div className="flex gap-2 mt-1">
+                        {mockResultsData.identidadVisual.paletaRecomendada.map((color, i) => (
+                          <div key={i} className="w-8 h-8 rounded-lg shadow-inner" style={{ backgroundColor: color }} />
+                        ))}
+                      </div>
+                    </div>
+                    <div><span className="text-muted-foreground">Estilo:</span> <span className="text-foreground">{mockResultsData.identidadVisual.estilo}</span></div>
+                    <div><span className="text-muted-foreground">Tema:</span> <span className="text-foreground">{mockResultsData.identidadVisual.tema}</span></div>
                   </CardContent>
                 </Card>
 
                 {/* E. ANÁLISIS REDES */}
-                <Card className="bg-card/50 backdrop-blur-sm border-blue-500/30">
+                <Card className="bg-gray-900/50 backdrop-blur-sm border-blue-500/30 hover:border-blue-500/50 transition-all">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5 text-blue-500" />
-                      E. ANÁLISIS REDES
+                    <CardTitle className="text-lg flex items-center gap-2 text-blue-500">
+                      <BarChart3 className="w-5 h-5" />
+                      ANÁLISIS REDES
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
-                    <div><strong>Contenido top:</strong> Videos cortos, Carruseles, Stories interactivas</div>
-                    <div><strong>Probabilidad de éxito:</strong> 78%</div>
-                    <div><strong>Competencia:</strong> Media-Alta en tu sector</div>
+                    <div><span className="text-muted-foreground">Contenido Top:</span> <span className="text-foreground">{mockResultsData.analisisRedes.contenidoTop}</span></div>
+                    <div><span className="text-muted-foreground">Probabilidad éxito:</span> <span className="text-green-400 font-bold">{mockResultsData.analisisRedes.probabilidadExito}</span></div>
+                    <div><span className="text-muted-foreground">Competencia:</span> <span className="text-foreground">{mockResultsData.analisisRedes.competencia}</span></div>
                   </CardContent>
                 </Card>
 
                 {/* F. ESTRATEGIA */}
-                <Card className="bg-card/50 backdrop-blur-sm border-orange-500/30">
+                <Card className="bg-gray-900/50 backdrop-blur-sm border-orange-500/30 hover:border-orange-500/50 transition-all">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-orange-500" />
-                      F. ESTRATEGIA
+                    <CardTitle className="text-lg flex items-center gap-2 text-orange-500">
+                      <TrendingUp className="w-5 h-5" />
+                      ESTRATEGIA
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
-                    <div><strong>Objetivo:</strong> Conversiones con enfoque en leads calificados</div>
-                    <div><strong>CTA recomendado:</strong> "Agenda tu consulta gratis"</div>
-                    <div><strong>Perfil ideal:</strong> Profesionales 25-45 años con poder adquisitivo medio-alto</div>
+                    <div><span className="text-muted-foreground">Objetivo:</span> <span className="text-foreground">{mockResultsData.estrategia.objetivo}</span></div>
+                    <div><span className="text-muted-foreground">CTA:</span> <span className="text-foreground font-medium">{mockResultsData.estrategia.cta}</span></div>
+                    <div><span className="text-muted-foreground">Perfil venta:</span> <span className="text-foreground">{mockResultsData.estrategia.perfilVenta}</span></div>
                   </CardContent>
                 </Card>
+              </div>
+
+              {/* Action Footer */}
+              <div className="flex items-center justify-end gap-4 pt-4">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-12 px-6 border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={handleDeleteData}
+                >
+                  <Trash2 className="w-5 h-5 mr-2" />
+                  ELIMINAR INFORMACIÓN
+                </Button>
+                <Button
+                  size="lg"
+                  className="h-12 px-8 bg-green-600 hover:bg-green-700"
+                  onClick={handleSave}
+                >
+                  <Save className="w-5 h-5 mr-2" />
+                  GUARDAR
+                </Button>
               </div>
             </div>
           )}
         </div>
       </main>
+
+      {/* Loading Modal */}
+      <Dialog open={isProcessing} onOpenChange={() => {}}>
+        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50 max-w-md [&>button]:hidden">
+          <div className="flex flex-col items-center justify-center py-8 space-y-6">
+            <h2 className="text-xl font-bold text-center">
+              Generando información de la empresa
+            </h2>
+            
+            {!processingComplete ? (
+              <>
+                {/* Animated Spinner */}
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full border-4 border-primary/20" />
+                  <div className="absolute inset-0 w-20 h-20 rounded-full border-4 border-transparent border-t-primary animate-spin" />
+                  <Sparkles className="absolute inset-0 m-auto w-8 h-8 text-primary animate-pulse" />
+                </div>
+                
+                {/* Changing Text */}
+                <p className="text-muted-foreground text-center animate-pulse min-h-[24px]">
+                  {loadingMessages[loadingMessageIndex]}
+                </p>
+              </>
+            ) : (
+              <>
+                {/* Success Check */}
+                <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center animate-scale-in">
+                  <CheckCircle2 className="w-12 h-12 text-green-500" />
+                </div>
+                <p className="text-green-400 font-medium">¡Análisis completado!</p>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
