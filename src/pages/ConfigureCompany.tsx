@@ -28,8 +28,59 @@ import {
   CheckCircle2,
   Trash2,
   Save,
-  Search
+  Search,
+  Lightbulb,
+  MessageSquare,
+  Zap
 } from 'lucide-react';
+
+// Types for AI analysis results
+interface AnalysisResult {
+  presentation: {
+    company_name: string;
+    what_sells: string;
+    main_attraction: string;
+    uniqueness: string;
+    competitive_advantages: string[];
+  };
+  audience: {
+    problems_solved: string[];
+    direct_interests: string[];
+    indirect_interests: string[];
+    target_countries: string[];
+    buyer_demographics: string;
+  };
+  value_proposition: {
+    keywords: string[];
+    inspiring_phrases: string[];
+    emotional_hooks: string[];
+  };
+  visual_identity: {
+    recommended_colors: Array<{
+      hex: string;
+      name: string;
+      psychology: string;
+    }>;
+    visual_style: string;
+    theme: string;
+    imagery_recommendations: string;
+  };
+  social_analysis: {
+    top_content_types: string[];
+    success_probability: string;
+    competition_level: string;
+    recommended_platforms: string[];
+    posting_frequency: string;
+  };
+  strategy: {
+    main_objective: string;
+    primary_cta: string;
+    secondary_ctas: string[];
+    sales_profile: string;
+    funnel_stages: string[];
+    budget_recommendation: string;
+  };
+}
 
 // Mock accounts with configuration status
 const mockAccounts = [
@@ -38,49 +89,14 @@ const mockAccounts = [
   { id: '3', name: 'Cuenta 3', hasData: false },
 ];
 
-// Mock results data
-const mockResultsData = {
-  presentacion: {
-    nombre: 'TechFlow Solutions',
-    venta: 'Software de automatización empresarial para PyMEs que buscan optimizar sus procesos operativos.',
-    atractivo: 'Interfaz intuitiva que reduce el tiempo de implementación en un 60%.',
-    unicidad: 'Único sistema que integra IA predictiva con automatización de flujos de trabajo.',
-    ventajas: 'Soporte 24/7, actualizaciones gratuitas, integración con +50 herramientas.'
-  },
-  publico: {
-    problemas: 'Pérdida de tiempo en tareas repetitivas, errores humanos en procesos, falta de visibilidad de métricas clave.',
-    intereses: 'Productividad, Tecnología, Emprendimiento, Eficiencia operativa',
-    paises: 'Colombia, México, Argentina, Chile, Perú'
-  },
-  valorAgregado: {
-    palabrasClave: 'automatización, eficiencia, innovación, productividad, resultados',
-    frases: '"Automatiza hoy, crece mañana", "Tu tiempo vale más", "Resultados en semanas, no meses"'
-  },
-  identidadVisual: {
-    paletaActual: ['#6366f1', '#8b5cf6', '#a855f7', '#3b82f6'],
-    paletaRecomendada: ['#10b981', '#06b6d4', '#6366f1', '#f59e0b'],
-    estilo: 'Moderno, Tecnológico, Profesional',
-    tema: 'Minimalista con acentos vibrantes'
-  },
-  analisisRedes: {
-    contenidoTop: 'Videos explicativos, Casos de éxito, Tips rápidos, Webinars',
-    probabilidadExito: '82%',
-    competencia: 'Media-Alta (12 competidores directos identificados)'
-  },
-  estrategia: {
-    objetivo: 'Generación de leads calificados con enfoque en demos gratuitas',
-    cta: '"Agenda tu demo gratuita" / "Prueba 14 días gratis"',
-    perfilVenta: 'Gerentes y directores de operaciones, 30-50 años, empresas 10-200 empleados'
-  }
-};
-
 const loadingMessages = [
   'La IA de KAI está trabajando...',
   'Analizando información del negocio...',
   'Identificando público objetivo...',
-  'Generando estrategia de marketing...',
-  'Analizando competencia...',
-  'Finalizando análisis...'
+  'Segmentando intereses directos e indirectos...',
+  'Generando paleta de colores...',
+  'Construyendo estrategia de marketing...',
+  'Finalizando análisis profundo...'
 ];
 
 const ConfigureCompany = () => {
@@ -93,6 +109,7 @@ const ConfigureCompany = () => {
   
   // Wizard states
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [businessInfo, setBusinessInfo] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   
@@ -101,14 +118,14 @@ const ConfigureCompany = () => {
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [processingComplete, setProcessingComplete] = useState(false);
   
-  // Account data state (simulated)
-  const [accountsData, setAccountsData] = useState<Record<string, boolean>>({
-    '1': true, // Cuenta 1 has data
-    '2': false,
-    '3': false
+  // Analysis results
+  const [analysisResults, setAnalysisResults] = useState<Record<string, AnalysisResult | null>>({
+    '1': null,
+    '2': null,
+    '3': null
   });
 
-  const currentAccountHasData = accountsData[selectedAccount] || false;
+  const currentAccountData = analysisResults[selectedAccount];
 
   useEffect(() => {
     if (!loading && !user) {
@@ -159,26 +176,13 @@ const ConfigureCompany = () => {
           }
           return prev;
         });
-      }, 700);
-      
-      // Complete after 4 seconds
-      const timeout = setTimeout(() => {
-        setProcessingComplete(true);
-        setTimeout(() => {
-          setIsProcessing(false);
-          setProcessingComplete(false);
-          setLoadingMessageIndex(0);
-          setAccountsData(prev => ({ ...prev, [selectedAccount]: true }));
-          toast.success('Análisis completado exitosamente');
-        }, 1000);
-      }, 4000);
+      }, 800);
       
       return () => {
         clearInterval(interval);
-        clearTimeout(timeout);
       };
     }
-  }, [isProcessing, processingComplete, selectedAccount]);
+  }, [isProcessing, processingComplete]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -189,22 +193,73 @@ const ConfigureCompany = () => {
     const file = e.target.files?.[0];
     if (file) {
       setUploadedFile(file);
+      // Read file content (for demo, we'll use the file name as info)
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        // For PDF, we'd need a PDF parser. For now, just note the file was uploaded
+        setBusinessInfo(`Documento cargado: ${file.name}`);
+      };
+      reader.readAsText(file);
     }
   };
 
-  const handleConfigure = () => {
+  const handleConfigure = async () => {
     if (!selectedCountry) {
       toast.error('Por favor selecciona un país');
       return;
     }
+    
     setIsProcessing(true);
+    setLoadingMessageIndex(0);
+    setProcessingComplete(false);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No authenticated session');
+      }
+
+      const country = countries.find(c => c.code === selectedCountry)?.name || selectedCountry;
+      
+      const response = await supabase.functions.invoke('analyze-business-pdf', {
+        body: {
+          businessInfo: businessInfo || `Empresa de ${country} buscando expandir su presencia digital y aumentar ventas a través de publicidad en Meta.`,
+          country: country,
+          city: selectedCity
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const { analysis } = response.data;
+      
+      setProcessingComplete(true);
+      
+      setTimeout(() => {
+        setIsProcessing(false);
+        setProcessingComplete(false);
+        setLoadingMessageIndex(0);
+        setAnalysisResults(prev => ({ ...prev, [selectedAccount]: analysis }));
+        toast.success('Análisis completado exitosamente');
+      }, 1500);
+
+    } catch (error) {
+      console.error('Error analyzing business:', error);
+      setIsProcessing(false);
+      setProcessingComplete(false);
+      toast.error('Error al analizar. Por favor intenta de nuevo.');
+    }
   };
 
   const handleDeleteData = () => {
-    setAccountsData(prev => ({ ...prev, [selectedAccount]: false }));
+    setAnalysisResults(prev => ({ ...prev, [selectedAccount]: null }));
     setUploadedFile(null);
     setSelectedCountry('');
     setSelectedCity('');
+    setBusinessInfo('');
     toast.success('Información eliminada correctamente');
   };
 
@@ -252,6 +307,19 @@ const ConfigureCompany = () => {
 
   const selectedCountryData = countries.find(c => c.code === selectedCountry);
 
+  // Color swatch component
+  const ColorSwatch = ({ hex, name, psychology }: { hex: string; name: string; psychology: string }) => (
+    <div className="flex flex-col items-center gap-2 p-3 rounded-lg bg-background/50">
+      <div 
+        className="w-12 h-12 rounded-full border-2 border-border shadow-lg"
+        style={{ backgroundColor: hex }}
+      />
+      <span className="text-xs font-mono text-muted-foreground">{hex}</span>
+      <span className="text-xs font-medium text-foreground">{name}</span>
+      <span className="text-xs text-muted-foreground text-center leading-tight">{psychology}</span>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
@@ -259,8 +327,8 @@ const ConfigureCompany = () => {
         {/* Logo */}
         <div className="p-6 border-b border-border/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-primary-foreground" />
             </div>
             <div>
               <h1 className="font-bold text-lg">Kai Ads Pro</h1>
@@ -360,7 +428,7 @@ const ConfigureCompany = () => {
         {/* User Profile */}
         <div className="p-4 border-t border-border/50">
           <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-semibold">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground font-semibold">
               {user.email?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
@@ -380,24 +448,24 @@ const ConfigureCompany = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-8 overflow-auto">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           {/* Header */}
           <header className="mb-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold">Configurar Empresa</h1>
                   <p className="text-muted-foreground">
-                    Sube la información de tu negocio para que la IA genere tu estrategia
+                    Análisis profundo de marketing con IA
                   </p>
                 </div>
               </div>
               {/* Account Selector */}
               <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                <SelectTrigger className="w-48 h-12">
+                <SelectTrigger className="w-48 h-12 border-primary/30">
                   <SelectValue placeholder="Seleccionar cuenta" />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
@@ -405,7 +473,7 @@ const ConfigureCompany = () => {
                     <SelectItem key={acc.id} value={acc.id}>
                       <div className="flex items-center gap-2">
                         <span>{acc.name}</span>
-                        {accountsData[acc.id] && (
+                        {analysisResults[acc.id] && (
                           <span className="w-2 h-2 rounded-full bg-green-500" />
                         )}
                       </div>
@@ -417,13 +485,13 @@ const ConfigureCompany = () => {
           </header>
 
           {/* STATE 1: Loading Form */}
-          {!currentAccountHasData ? (
+          {!currentAccountData ? (
             <div className="space-y-6 animate-fade-in">
               {/* Card A: Document Requirements */}
-              <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+              <Card className="bg-card border-primary/20">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <FileText className="w-6 h-6 text-primary" />
+                  <CardTitle className="flex items-center gap-2 text-xl text-primary">
+                    <FileText className="w-6 h-6" />
                     Requisitos del Documento
                   </CardTitle>
                   <p className="text-muted-foreground text-sm mt-1">
@@ -432,31 +500,23 @@ const ConfigureCompany = () => {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Checklist */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-sm">¿Qué te hace único frente a la competencia?</span>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-sm">¿A quién le vendes principalmente?</span>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-sm">¿Qué problema resuelves?</span>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-sm">¿Qué ofreces exactamente?</span>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 md:col-span-2 md:w-1/2">
-                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-sm">¿Cómo hablas con tus clientes?</span>
-                    </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    {[
+                      '¿Qué te hace único frente a la competencia?',
+                      '¿A quién le vendes principalmente?',
+                      '¿Qué problema resuelves?',
+                      '¿Qué ofreces exactamente?',
+                      '¿Cómo hablas con tus clientes?'
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                        <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                        <span className="text-sm">{item}</span>
+                      </div>
+                    ))}
                   </div>
 
                   {/* File Upload */}
-                  <div className="border-2 border-dashed border-primary/30 rounded-xl p-6 bg-primary/5 transition-all hover:border-primary/50 hover:bg-primary/10">
+                  <div className="border-2 border-dashed border-primary/30 rounded-xl p-6 bg-primary/5 transition-all hover:border-primary/50">
                     <div className="flex flex-col items-center gap-4">
                       <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
                         <Upload className="w-8 h-8 text-primary" />
@@ -483,10 +543,10 @@ const ConfigureCompany = () => {
               </Card>
 
               {/* Card B: Geographic Segmentation */}
-              <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+              <Card className="bg-card border-primary/20">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <Globe className="w-6 h-6 text-accent" />
+                  <CardTitle className="flex items-center gap-2 text-xl text-primary">
+                    <Globe className="w-6 h-6" />
                     Segmentación Geográfica
                   </CardTitle>
                 </CardHeader>
@@ -499,7 +559,7 @@ const ConfigureCompany = () => {
                         setSelectedCountry(val);
                         setSelectedCity('');
                       }}>
-                        <SelectTrigger className="h-12 w-full">
+                        <SelectTrigger className="h-12 w-full border-primary/30">
                           <div className="flex items-center gap-2">
                             <Search className="w-4 h-4 text-muted-foreground" />
                             <SelectValue placeholder="Buscar país..." />
@@ -523,7 +583,7 @@ const ConfigureCompany = () => {
                         onValueChange={setSelectedCity}
                         disabled={!selectedCountry}
                       >
-                        <SelectTrigger className={`h-12 w-full ${!selectedCountry ? 'opacity-50' : ''}`}>
+                        <SelectTrigger className={`h-12 w-full border-primary/30 ${!selectedCountry ? 'opacity-50' : ''}`}>
                           <div className="flex items-center gap-2">
                             <Search className="w-4 h-4 text-muted-foreground" />
                             <SelectValue placeholder={selectedCountry ? "Seleccionar ciudad..." : "Primero selecciona un país"} />
@@ -545,7 +605,7 @@ const ConfigureCompany = () => {
               {/* Main Action Button */}
               <Button 
                 size="lg" 
-                className="w-full h-16 text-xl font-bold bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+                className="w-full h-16 text-xl font-bold bg-primary hover:bg-primary/90 transition-all shadow-lg"
                 onClick={handleConfigure}
               >
                 <Sparkles className="w-6 h-6 mr-3" />
@@ -553,119 +613,304 @@ const ConfigureCompany = () => {
               </Button>
             </div>
           ) : (
-            /* STATE 2: Results Dashboard */
+            /* STATE 2: Results Dashboard - Full Width Vertical Cards */
             <div className="space-y-6 animate-fade-in">
-              {/* Results Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* A. PRESENTACIÓN */}
-                <Card className="bg-gray-900/50 backdrop-blur-sm border-primary/30 hover:border-primary/50 transition-all">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2 text-primary">
-                      <Eye className="w-5 h-5" />
-                      PRESENTACIÓN
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div><span className="text-muted-foreground">Nombre:</span> <span className="text-foreground font-medium">{mockResultsData.presentacion.nombre}</span></div>
-                    <div><span className="text-muted-foreground">Qué vende:</span> <span className="text-foreground">{mockResultsData.presentacion.venta}</span></div>
-                    <div><span className="text-muted-foreground">Atractivo:</span> <span className="text-foreground">{mockResultsData.presentacion.atractivo}</span></div>
-                    <div><span className="text-muted-foreground">Unicidad:</span> <span className="text-foreground">{mockResultsData.presentacion.unicidad}</span></div>
-                    <div><span className="text-muted-foreground">Ventajas:</span> <span className="text-foreground">{mockResultsData.presentacion.ventajas}</span></div>
-                  </CardContent>
-                </Card>
+              
+              {/* PRESENTACIÓN */}
+              <Card className="bg-card border-primary/30">
+                <CardHeader className="border-b border-border/50">
+                  <CardTitle className="text-xl flex items-center gap-3 text-primary">
+                    <Eye className="w-6 h-6" />
+                    PRESENTACIÓN
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Nombre de la Empresa</span>
+                    <p className="text-lg font-semibold">{currentAccountData.presentation.company_name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Qué Vende</span>
+                    <p className="text-foreground leading-relaxed">{currentAccountData.presentation.what_sells}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Atractivo Principal</span>
+                    <p className="text-foreground leading-relaxed">{currentAccountData.presentation.main_attraction}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Unicidad</span>
+                    <p className="text-foreground leading-relaxed">{currentAccountData.presentation.uniqueness}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-sm text-muted-foreground">Ventajas Competitivas</span>
+                    <ul className="space-y-2">
+                      {currentAccountData.presentation.competitive_advantages.map((adv, i) => (
+                        <li key={i} className="flex items-start gap-2 text-foreground">
+                          <CheckCircle2 className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                          <span>{adv}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* B. PÚBLICO */}
-                <Card className="bg-gray-900/50 backdrop-blur-sm border-accent/30 hover:border-accent/50 transition-all">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2 text-accent">
-                      <Users className="w-5 h-5" />
-                      PÚBLICO
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div><span className="text-muted-foreground">Problemas:</span> <span className="text-foreground">{mockResultsData.publico.problemas}</span></div>
-                    <div><span className="text-muted-foreground">Intereses:</span> <span className="text-foreground">{mockResultsData.publico.intereses}</span></div>
-                    <div><span className="text-muted-foreground">Países impacto:</span> <span className="text-foreground">{mockResultsData.publico.paises}</span></div>
-                  </CardContent>
-                </Card>
-
-                {/* C. VALOR AGREGADO */}
-                <Card className="bg-gray-900/50 backdrop-blur-sm border-green-500/30 hover:border-green-500/50 transition-all">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2 text-green-500">
-                      <Sparkles className="w-5 h-5" />
-                      VALOR AGREGADO
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div><span className="text-muted-foreground">Palabras clave:</span> <span className="text-foreground">{mockResultsData.valorAgregado.palabrasClave}</span></div>
-                    <div><span className="text-muted-foreground">Frases inspiradoras:</span> <span className="text-foreground italic">{mockResultsData.valorAgregado.frases}</span></div>
-                  </CardContent>
-                </Card>
-
-                {/* D. IDENTIDAD VISUAL */}
-                <Card className="bg-gray-900/50 backdrop-blur-sm border-purple-500/30 hover:border-purple-500/50 transition-all">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2 text-purple-500">
-                      <Palette className="w-5 h-5" />
-                      IDENTIDAD VISUAL
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Paleta actual:</span>
-                      <div className="flex gap-2 mt-1">
-                        {mockResultsData.identidadVisual.paletaActual.map((color, i) => (
-                          <div key={i} className="w-8 h-8 rounded-lg shadow-inner" style={{ backgroundColor: color }} />
+              {/* PÚBLICO */}
+              <Card className="bg-card border-primary/30">
+                <CardHeader className="border-b border-border/50">
+                  <CardTitle className="text-xl flex items-center gap-3 text-primary">
+                    <Users className="w-6 h-6" />
+                    PÚBLICO OBJETIVO
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-6">
+                  <div className="space-y-2">
+                    <span className="text-sm text-muted-foreground">Problemas que Resuelve</span>
+                    <ul className="space-y-2">
+                      {currentAccountData.audience.problems_solved.map((problem, i) => (
+                        <li key={i} className="flex items-start gap-2 text-foreground">
+                          <Target className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                          <span>{problem}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <span className="text-sm text-muted-foreground font-medium">Intereses Directos (10)</span>
+                      <ul className="space-y-1">
+                        {currentAccountData.audience.direct_interests.map((interest, i) => (
+                          <li key={i} className="flex items-center gap-2 text-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            <span>{interest}</span>
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Paleta recomendada:</span>
-                      <div className="flex gap-2 mt-1">
-                        {mockResultsData.identidadVisual.paletaRecomendada.map((color, i) => (
-                          <div key={i} className="w-8 h-8 rounded-lg shadow-inner" style={{ backgroundColor: color }} />
+                    <div className="space-y-2">
+                      <span className="text-sm text-muted-foreground font-medium">Intereses Indirectos (10)</span>
+                      <ul className="space-y-1">
+                        {currentAccountData.audience.indirect_interests.map((interest, i) => (
+                          <li key={i} className="flex items-center gap-2 text-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
+                            <span>{interest}</span>
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                     </div>
-                    <div><span className="text-muted-foreground">Estilo:</span> <span className="text-foreground">{mockResultsData.identidadVisual.estilo}</span></div>
-                    <div><span className="text-muted-foreground">Tema:</span> <span className="text-foreground">{mockResultsData.identidadVisual.tema}</span></div>
-                  </CardContent>
-                </Card>
+                  </div>
 
-                {/* E. ANÁLISIS REDES */}
-                <Card className="bg-gray-900/50 backdrop-blur-sm border-blue-500/30 hover:border-blue-500/50 transition-all">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2 text-blue-500">
-                      <BarChart3 className="w-5 h-5" />
-                      ANÁLISIS REDES
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div><span className="text-muted-foreground">Contenido Top:</span> <span className="text-foreground">{mockResultsData.analisisRedes.contenidoTop}</span></div>
-                    <div><span className="text-muted-foreground">Probabilidad éxito:</span> <span className="text-green-400 font-bold">{mockResultsData.analisisRedes.probabilidadExito}</span></div>
-                    <div><span className="text-muted-foreground">Competencia:</span> <span className="text-foreground">{mockResultsData.analisisRedes.competencia}</span></div>
-                  </CardContent>
-                </Card>
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Demografía del Comprador</span>
+                    <p className="text-foreground leading-relaxed">{currentAccountData.audience.buyer_demographics}</p>
+                  </div>
 
-                {/* F. ESTRATEGIA */}
-                <Card className="bg-gray-900/50 backdrop-blur-sm border-orange-500/30 hover:border-orange-500/50 transition-all">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2 text-orange-500">
-                      <TrendingUp className="w-5 h-5" />
-                      ESTRATEGIA
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div><span className="text-muted-foreground">Objetivo:</span> <span className="text-foreground">{mockResultsData.estrategia.objetivo}</span></div>
-                    <div><span className="text-muted-foreground">CTA:</span> <span className="text-foreground font-medium">{mockResultsData.estrategia.cta}</span></div>
-                    <div><span className="text-muted-foreground">Perfil venta:</span> <span className="text-foreground">{mockResultsData.estrategia.perfilVenta}</span></div>
-                  </CardContent>
-                </Card>
-              </div>
+                  <div className="space-y-2">
+                    <span className="text-sm text-muted-foreground">Países Objetivo</span>
+                    <div className="flex flex-wrap gap-2">
+                      {currentAccountData.audience.target_countries.map((country, i) => (
+                        <span key={i} className="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm">
+                          {country}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* VALOR AGREGADO */}
+              <Card className="bg-card border-primary/30">
+                <CardHeader className="border-b border-border/50">
+                  <CardTitle className="text-xl flex items-center gap-3 text-primary">
+                    <Lightbulb className="w-6 h-6" />
+                    PROPUESTA DE VALOR
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-6">
+                  <div className="space-y-2">
+                    <span className="text-sm text-muted-foreground">Palabras Clave</span>
+                    <div className="flex flex-wrap gap-2">
+                      {currentAccountData.value_proposition.keywords.map((kw, i) => (
+                        <span key={i} className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-sm font-medium">
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-sm text-muted-foreground">Frases Inspiradoras</span>
+                    <ul className="space-y-2">
+                      {currentAccountData.value_proposition.inspiring_phrases.map((phrase, i) => (
+                        <li key={i} className="p-3 rounded-lg bg-primary/5 border border-primary/10 text-foreground italic">
+                          "{phrase}"
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-sm text-muted-foreground">Ganchos Emocionales</span>
+                    <ul className="space-y-2">
+                      {currentAccountData.value_proposition.emotional_hooks.map((hook, i) => (
+                        <li key={i} className="flex items-start gap-2 text-foreground">
+                          <Zap className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                          <span>{hook}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* IDENTIDAD VISUAL */}
+              <Card className="bg-card border-primary/30">
+                <CardHeader className="border-b border-border/50">
+                  <CardTitle className="text-xl flex items-center gap-3 text-primary">
+                    <Palette className="w-6 h-6" />
+                    IDENTIDAD VISUAL
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-6">
+                  <div className="space-y-3">
+                    <span className="text-sm text-muted-foreground">Paleta de Colores Recomendada</span>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {currentAccountData.visual_identity.recommended_colors.map((color, i) => (
+                        <ColorSwatch 
+                          key={i}
+                          hex={color.hex}
+                          name={color.name}
+                          psychology={color.psychology}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1">
+                      <span className="text-sm text-muted-foreground">Estilo Visual</span>
+                      <p className="text-foreground">{currentAccountData.visual_identity.visual_style}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-sm text-muted-foreground">Tema</span>
+                      <p className="text-foreground">{currentAccountData.visual_identity.theme}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Recomendaciones de Imágenes</span>
+                    <p className="text-foreground leading-relaxed">{currentAccountData.visual_identity.imagery_recommendations}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ANÁLISIS REDES */}
+              <Card className="bg-card border-primary/30">
+                <CardHeader className="border-b border-border/50">
+                  <CardTitle className="text-xl flex items-center gap-3 text-primary">
+                    <BarChart3 className="w-6 h-6" />
+                    ANÁLISIS DE REDES SOCIALES
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 text-center">
+                      <p className="text-3xl font-bold text-primary">{currentAccountData.social_analysis.success_probability}</p>
+                      <p className="text-sm text-muted-foreground mt-1">Probabilidad de Éxito</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-secondary border border-border text-center col-span-2">
+                      <p className="text-lg font-semibold text-foreground">{currentAccountData.social_analysis.competition_level}</p>
+                      <p className="text-sm text-muted-foreground mt-1">Nivel de Competencia</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-sm text-muted-foreground">Tipos de Contenido Top</span>
+                    <div className="flex flex-wrap gap-2">
+                      {currentAccountData.social_analysis.top_content_types.map((type, i) => (
+                        <span key={i} className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-sm">
+                          {type}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-sm text-muted-foreground">Plataformas Recomendadas</span>
+                    <ul className="space-y-2">
+                      {currentAccountData.social_analysis.recommended_platforms.map((platform, i) => (
+                        <li key={i} className="flex items-start gap-2 text-foreground">
+                          <MessageSquare className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                          <span>{platform}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Frecuencia de Publicación</span>
+                    <p className="text-foreground">{currentAccountData.social_analysis.posting_frequency}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ESTRATEGIA */}
+              <Card className="bg-card border-primary/30">
+                <CardHeader className="border-b border-border/50">
+                  <CardTitle className="text-xl flex items-center gap-3 text-primary">
+                    <TrendingUp className="w-6 h-6" />
+                    ESTRATEGIA DE MARKETING
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-6">
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Objetivo Principal</span>
+                    <p className="text-foreground leading-relaxed">{currentAccountData.strategy.main_objective}</p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                    <span className="text-sm text-muted-foreground">CTA Principal</span>
+                    <p className="text-lg font-bold text-primary mt-1">{currentAccountData.strategy.primary_cta}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-sm text-muted-foreground">CTAs Secundarios</span>
+                    <div className="flex flex-wrap gap-2">
+                      {currentAccountData.strategy.secondary_ctas.map((cta, i) => (
+                        <span key={i} className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-sm font-medium">
+                          {cta}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Perfil de Venta Ideal</span>
+                    <p className="text-foreground leading-relaxed">{currentAccountData.strategy.sales_profile}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-sm text-muted-foreground">Etapas del Funnel</span>
+                    <div className="flex flex-wrap gap-2">
+                      {currentAccountData.strategy.funnel_stages.map((stage, i) => (
+                        <span key={i} className="px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm font-medium flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">{i + 1}</span>
+                          {stage}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-secondary border border-border">
+                    <span className="text-sm text-muted-foreground">Presupuesto Recomendado</span>
+                    <p className="text-foreground mt-1">{currentAccountData.strategy.budget_recommendation}</p>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Action Footer */}
-              <div className="flex items-center justify-end gap-4 pt-4">
+              <div className="flex items-center justify-end gap-4 pt-4 pb-8">
                 <Button
                   variant="outline"
                   size="lg"
@@ -691,10 +936,10 @@ const ConfigureCompany = () => {
 
       {/* Loading Modal */}
       <Dialog open={isProcessing} onOpenChange={() => {}}>
-        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50 max-w-md [&>button]:hidden">
+        <DialogContent className="bg-card/95 backdrop-blur-xl border-primary/30 max-w-md [&>button]:hidden">
           <div className="flex flex-col items-center justify-center py-8 space-y-6">
             <h2 className="text-xl font-bold text-center">
-              Generando información de la empresa
+              Generando análisis profundo
             </h2>
             
             {!processingComplete ? (

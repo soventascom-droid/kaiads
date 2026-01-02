@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.meta-fetch-assets]
 verify_jwt = false
+
+[functions.analyze-business-pdf]
+verify_jwt = true
