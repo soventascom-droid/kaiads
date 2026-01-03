@@ -160,7 +160,48 @@ Genera un análisis profundo y detallado siguiendo todas las reglas del sistema.
       }
     }
 
-    const analysis = JSON.parse(jsonContent);
+    // Clean the JSON content to fix common issues
+    jsonContent = jsonContent
+      .trim()
+      // Remove any trailing commas before closing brackets
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
+      // Fix unescaped quotes inside strings (common AI issue)
+      .replace(/([^\\])"\s*([^,}\]:"])/g, '$1\\"$2')
+      // Remove control characters that break JSON
+      .replace(/[\x00-\x1F\x7F]/g, (match: string) => {
+        if (match === '\n' || match === '\r' || match === '\t') {
+          return match === '\n' ? '\\n' : match === '\r' ? '\\r' : '\\t';
+        }
+        return '';
+      });
+
+    let analysis;
+    try {
+      analysis = JSON.parse(jsonContent);
+    } catch (parseError) {
+      console.error("First parse attempt failed, trying to fix JSON...");
+      console.error("Parse error:", parseError);
+      
+      // Try a more aggressive cleanup
+      try {
+        // Remove problematic escape sequences
+        const cleanedContent = jsonContent
+          .replace(/\\/g, '\\\\')
+          .replace(/\\\\"/g, '\\"')
+          .replace(/\\\\n/g, '\\n')
+          .replace(/\\\\r/g, '\\r')
+          .replace(/\\\\t/g, '\\t');
+        
+        analysis = JSON.parse(cleanedContent);
+      } catch (secondError) {
+        console.error("Second parse attempt also failed");
+        console.error("Content preview (first 500 chars):", jsonContent.substring(0, 500));
+        console.error("Content preview (last 500 chars):", jsonContent.substring(jsonContent.length - 500));
+        throw new Error(`Failed to parse AI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`);
+      }
+    }
+    
     console.log("Analysis parsed successfully");
 
     return new Response(JSON.stringify({ analysis }), {
