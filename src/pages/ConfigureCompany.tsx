@@ -314,9 +314,9 @@ const ConfigureCompany = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="h-screen bg-background flex overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-72 bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col">
+      <aside className="w-72 bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col flex-shrink-0 overflow-y-auto">
         {/* Logo */}
         <div className="p-6 border-b border-border/50">
           <div className="flex items-center gap-3">

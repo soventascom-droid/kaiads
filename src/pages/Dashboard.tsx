@@ -160,9 +160,9 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="h-screen bg-background flex overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-72 bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col">
+      <aside className="w-72 bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col flex-shrink-0 overflow-y-auto">
         {/* Logo */}
         <div className="p-6 border-b border-border/50">
           <div className="flex items-center gap-3">
@@ -283,7 +283,7 @@ const Dashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8">
+      <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-4xl mx-auto">
           <header className="mb-8">
             <h1 className="text-3xl font-bold">Conectar Cuentas de Meta</h1>
