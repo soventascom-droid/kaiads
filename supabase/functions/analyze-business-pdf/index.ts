@@ -146,62 +146,78 @@ Genera un análisis profundo y detallado siguiendo todas las reglas del sistema.
 
     console.log("AI response received, parsing JSON...");
 
-    // Extract JSON from the response (handle markdown code blocks)
-    let jsonContent = content;
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      jsonContent = jsonMatch[1];
-    } else {
-      // Try to find JSON object directly
-      const jsonStart = content.indexOf('{');
-      const jsonEnd = content.lastIndexOf('}');
-      if (jsonStart !== -1 && jsonEnd !== -1) {
-        jsonContent = content.substring(jsonStart, jsonEnd + 1);
+    const extractJsonCandidate = (raw: string) => {
+      let text = raw.trim();
+
+      // Handle markdown code fences
+      const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+      if (fenceMatch?.[1]) text = fenceMatch[1].trim();
+
+      // Fallback: extract the first JSON object-like chunk
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        text = text.slice(start, end + 1);
       }
+
+      return text.trim();
+    };
+
+    const removeTrailingCommas = (s: string) => s.replace(/,\s*([}\]])/g, "$1");
+
+    const decodeEscapedJson = (s: string) =>
+      // Handles payloads like: {\n  \"presentation\": ... }
+      s
+        .replace(/\\r\\n/g, "\n")
+        .replace(/\\n/g, "\n")
+        .replace(/\\r/g, "\r")
+        .replace(/\\t/g, "\t")
+        .replace(/\\"/g, '"');
+
+    const candidate = extractJsonCandidate(content);
+
+    // If the model returns JSON with escaped quotes/newlines (invalid JSON), decode it.
+    // Typical signature: starts with `{\n  \"presentation\": ... }`
+    const looksLikeEscapedJson =
+      candidate.includes('\\"') &&
+      candidate.includes('\\"presentation\\"') &&
+      !candidate.includes('"presentation"');
+
+    const attempts: string[] = [candidate, removeTrailingCommas(candidate)];
+
+    if (looksLikeEscapedJson) {
+      attempts.push(decodeEscapedJson(candidate));
+      attempts.push(decodeEscapedJson(removeTrailingCommas(candidate)));
     }
 
-    // Clean the JSON content to fix common issues
-    jsonContent = jsonContent
-      .trim()
-      // Remove any trailing commas before closing brackets
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']')
-      // Fix unescaped quotes inside strings (common AI issue)
-      .replace(/([^\\])"\s*([^,}\]:"])/g, '$1\\"$2')
-      // Remove control characters that break JSON
-      .replace(/[\x00-\x1F\x7F]/g, (match: string) => {
-        if (match === '\n' || match === '\r' || match === '\t') {
-          return match === '\n' ? '\\n' : match === '\r' ? '\\r' : '\\t';
-        }
-        return '';
-      });
+    let analysis: any | undefined;
+    let lastParseError: unknown;
 
-    let analysis;
-    try {
-      analysis = JSON.parse(jsonContent);
-    } catch (parseError) {
-      console.error("First parse attempt failed, trying to fix JSON...");
-      console.error("Parse error:", parseError);
-      
-      // Try a more aggressive cleanup
+    for (const attempt of attempts) {
       try {
-        // Remove problematic escape sequences
-        const cleanedContent = jsonContent
-          .replace(/\\/g, '\\\\')
-          .replace(/\\\\"/g, '\\"')
-          .replace(/\\\\n/g, '\\n')
-          .replace(/\\\\r/g, '\\r')
-          .replace(/\\\\t/g, '\\t');
-        
-        analysis = JSON.parse(cleanedContent);
-      } catch (secondError) {
-        console.error("Second parse attempt also failed");
-        console.error("Content preview (first 500 chars):", jsonContent.substring(0, 500));
-        console.error("Content preview (last 500 chars):", jsonContent.substring(jsonContent.length - 500));
-        throw new Error(`Failed to parse AI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`);
+        analysis = JSON.parse(attempt);
+        break;
+      } catch (e) {
+        lastParseError = e;
       }
     }
-    
+
+    if (!analysis) {
+      console.error("Failed to parse AI JSON after attempts.");
+      console.error("Last parse error:", lastParseError);
+      console.error("Candidate preview (first 500 chars):", candidate.substring(0, 500));
+      console.error(
+        "Candidate preview (last 500 chars):",
+        candidate.substring(Math.max(0, candidate.length - 500))
+      );
+
+      throw new Error(
+        `Failed to parse AI response as JSON: ${
+          lastParseError instanceof Error ? lastParseError.message : "Unknown parse error"
+        }`
+      );
+    }
+
     console.log("Analysis parsed successfully");
 
     return new Response(JSON.stringify({ analysis }), {
