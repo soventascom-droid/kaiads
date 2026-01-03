@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import FileUploadZone from '@/components/FileUploadZone';
+import LocationSearch from '@/components/LocationSearch';
 import { 
-  Upload, Globe, Target, 
+  Globe, Target, 
   Palette, TrendingUp, Users, Sparkles, 
   FileText, BarChart3, Eye,
   Link as LinkIcon, 
@@ -28,11 +28,18 @@ import {
   CheckCircle2,
   Trash2,
   Save,
-  Search,
   Lightbulb,
   MessageSquare,
   Zap
 } from 'lucide-react';
+
+// Location type for the search component
+interface Location {
+  id: string;
+  name: string;
+  type: 'country' | 'city' | 'region';
+  parent?: string;
+}
 
 // Types for AI analysis results
 interface AnalysisResult {
@@ -110,8 +117,7 @@ const ConfigureCompany = () => {
   // Wizard states
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [businessInfo, setBusinessInfo] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState('');
-  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedLocations, setSelectedLocations] = useState<Location[]>([]);
   
   // Loading modal
   const [isProcessing, setIsProcessing] = useState(false);
@@ -189,23 +195,18 @@ const ConfigureCompany = () => {
     navigate('/');
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileUpload = (file: File | null) => {
+    setUploadedFile(file);
     if (file) {
-      setUploadedFile(file);
-      // Read file content (for demo, we'll use the file name as info)
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        // For PDF, we'd need a PDF parser. For now, just note the file was uploaded
-        setBusinessInfo(`Documento cargado: ${file.name}`);
-      };
-      reader.readAsText(file);
+      setBusinessInfo(`Documento cargado: ${file.name}`);
+    } else {
+      setBusinessInfo('');
     }
   };
 
   const handleConfigure = async () => {
-    if (!selectedCountry) {
-      toast.error('Por favor selecciona un país');
+    if (selectedLocations.length === 0) {
+      toast.error('Por favor selecciona al menos una ubicación');
       return;
     }
     
@@ -220,13 +221,16 @@ const ConfigureCompany = () => {
         throw new Error('No authenticated session');
       }
 
-      const country = countries.find(c => c.code === selectedCountry)?.name || selectedCountry;
+      // Format locations for the API
+      const locationNames = selectedLocations.map(loc => 
+        loc.parent ? `${loc.name}, ${loc.parent}` : loc.name
+      ).join('; ');
       
       const response = await supabase.functions.invoke('analyze-business-pdf', {
         body: {
-          businessInfo: businessInfo || `Empresa de ${country} buscando expandir su presencia digital y aumentar ventas a través de publicidad en Meta.`,
-          country: country,
-          city: selectedCity
+          businessInfo: businessInfo || `Empresa buscando expandir su presencia digital y aumentar ventas a través de publicidad en Meta.`,
+          country: locationNames,
+          city: ''
         }
       });
 
@@ -257,8 +261,7 @@ const ConfigureCompany = () => {
   const handleDeleteData = () => {
     setAnalysisResults(prev => ({ ...prev, [selectedAccount]: null }));
     setUploadedFile(null);
-    setSelectedCountry('');
-    setSelectedCity('');
+    setSelectedLocations([]);
     setBusinessInfo('');
     toast.success('Información eliminada correctamente');
   };
@@ -296,16 +299,6 @@ const ConfigureCompany = () => {
     { icon: CreditCard, label: 'Facturación', href: '#billing' },
     { icon: Bell, label: 'Novedades', href: '#news' },
   ];
-
-  const countries = [
-    { code: 'co', name: 'Colombia', cities: ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena'] },
-    { code: 'mx', name: 'México', cities: ['Ciudad de México', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana'] },
-    { code: 'ar', name: 'Argentina', cities: ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'La Plata'] },
-    { code: 'es', name: 'España', cities: ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao'] },
-    { code: 'us', name: 'Estados Unidos', cities: ['Nueva York', 'Los Angeles', 'Chicago', 'Miami', 'Houston'] },
-  ];
-
-  const selectedCountryData = countries.find(c => c.code === selectedCountry);
 
   // Color swatch component
   const ColorSwatch = ({ hex, name, psychology }: { hex: string; name: string; psychology: string }) => (
@@ -515,90 +508,32 @@ const ConfigureCompany = () => {
                     ))}
                   </div>
 
-                  {/* File Upload */}
-                  <div className="border-2 border-dashed border-primary/30 rounded-xl p-6 bg-primary/5 transition-all hover:border-primary/50">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Upload className="w-8 h-8 text-primary" />
-                      </div>
-                      <div className="text-center">
-                        <p className="font-medium">Arrastra tu archivo PDF aquí</p>
-                        <p className="text-sm text-muted-foreground">o haz clic para seleccionar</p>
-                      </div>
-                      <Input
-                        type="file"
-                        accept=".pdf"
-                        onChange={handleFileChange}
-                        className="max-w-xs h-12 cursor-pointer"
-                      />
-                      {uploadedFile && (
-                        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 text-green-400">
-                          <FileText className="w-4 h-4" />
-                          <span className="text-sm font-medium">{uploadedFile.name}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  {/* File Upload Zone */}
+                  <FileUploadZone
+                    onFileChange={handleFileUpload}
+                    uploadedFile={uploadedFile}
+                    accept=".pdf"
+                  />
                 </CardContent>
               </Card>
 
-              {/* Card B: Geographic Segmentation */}
+              {/* Card B: Geographic Segmentation - Meta Ads Style */}
               <Card className="bg-card border-primary/20">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-xl text-primary">
                     <Globe className="w-6 h-6" />
                     Segmentación Geográfica
                   </CardTitle>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Selecciona uno o más lugares donde quieres anunciarte
+                  </p>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Country Select */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">País</Label>
-                      <Select value={selectedCountry} onValueChange={(val) => {
-                        setSelectedCountry(val);
-                        setSelectedCity('');
-                      }}>
-                        <SelectTrigger className="h-12 w-full border-primary/30">
-                          <div className="flex items-center gap-2">
-                            <Search className="w-4 h-4 text-muted-foreground" />
-                            <SelectValue placeholder="Buscar país..." />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent className="bg-card border-border">
-                          {countries.map(country => (
-                            <SelectItem key={country.code} value={country.code}>
-                              {country.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* City Select */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Ciudad</Label>
-                      <Select 
-                        value={selectedCity} 
-                        onValueChange={setSelectedCity}
-                        disabled={!selectedCountry}
-                      >
-                        <SelectTrigger className={`h-12 w-full border-primary/30 ${!selectedCountry ? 'opacity-50' : ''}`}>
-                          <div className="flex items-center gap-2">
-                            <Search className="w-4 h-4 text-muted-foreground" />
-                            <SelectValue placeholder={selectedCountry ? "Seleccionar ciudad..." : "Primero selecciona un país"} />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent className="bg-card border-border">
-                          {selectedCountryData?.cities.map(city => (
-                            <SelectItem key={city} value={city}>
-                              {city}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                <CardContent>
+                  <LocationSearch
+                    selectedLocations={selectedLocations}
+                    onLocationsChange={setSelectedLocations}
+                    placeholder="Buscar lugares (países, ciudades, regiones)..."
+                  />
                 </CardContent>
               </Card>
 
