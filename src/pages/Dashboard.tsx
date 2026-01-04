@@ -20,7 +20,8 @@ import {
   Shield,
   Settings,
   Users,
-  Lock
+  Lock,
+  Brain
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -149,6 +150,7 @@ const Dashboard = () => {
   ];
 
   const adminItems = [
+    { icon: Brain, label: 'Entrenamiento IA', href: '/admin/ai-training' },
     { icon: Users, label: 'Gestionar usuarios', href: '#users' },
     { icon: Settings, label: 'Configuración', href: '#settings' },
   ];
@@ -226,6 +228,12 @@ const Dashboard = () => {
                 <a
                   key={item.label}
                   href={item.href}
+                  onClick={(e) => {
+                    if (item.href.startsWith('/')) {
+                      e.preventDefault();
+                      navigate(item.href);
+                    }
+                  }}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all group"
                 >
                   <item.icon className="w-5 h-5" />
