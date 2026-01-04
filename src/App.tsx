@@ -9,7 +9,9 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import MetaCallback from "./pages/MetaCallback";
 import ConfigureCompany from "./pages/ConfigureCompany";
+import AITraining from "./pages/AITraining";
 import NotFound from "./pages/NotFound";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -25,6 +27,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/meta-callback" element={<MetaCallback />} />
             <Route path="/configure-company" element={<ConfigureCompany />} />
+            <Route path="/admin/ai-training" element={<AITraining />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

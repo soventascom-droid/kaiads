@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_system_prompts: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          model_config: Json | null
+          module_key: string
+          system_instruction: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          model_config?: Json | null
+          module_key: string
+          system_instruction?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          model_config?: Json | null
+          module_key?: string
+          system_instruction?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_configurations: {
         Row: {
           ad_account_id: string | null
