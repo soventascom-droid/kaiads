@@ -266,8 +266,43 @@ const ConfigureCompany = () => {
     toast.success('Información eliminada correctamente');
   };
 
-  const handleSave = () => {
-    toast.success('Configuración guardada correctamente');
+  const handleSave = async () => {
+    if (!user || !currentAccountData) {
+      toast.error('No hay datos para guardar');
+      return;
+    }
+
+    try {
+      // Check if configuration already exists
+      const { data: existing } = await supabase
+        .from('business_configurations')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing configuration
+        const { error } = await supabase
+          .from('business_configurations')
+          .update({ is_configured: true, updated_at: new Date().toISOString() })
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new configuration
+        const { error } = await supabase
+          .from('business_configurations')
+          .insert({ user_id: user.id, is_configured: true });
+
+        if (error) throw error;
+      }
+
+      setIsBusinessConfigured(true);
+      toast.success('Configuración guardada correctamente');
+    } catch (error) {
+      console.error('Error saving configuration:', error);
+      toast.error('Error al guardar la configuración');
+    }
   };
 
   if (loading) {
@@ -285,8 +320,8 @@ const ConfigureCompany = () => {
   const menuItems = [
     { icon: LinkIcon, label: 'Conectar cuenta', href: '/dashboard', locked: false },
     { icon: Building2, label: 'Configurar empresa', href: '/configure-company', locked: false, active: true },
-    { icon: Megaphone, label: 'Campañas de venta', href: '#campaigns', locked: true },
-    { icon: BarChart3, label: 'Estrategias activas', href: '#strategies', locked: true },
+    { icon: Megaphone, label: 'Campañas de venta', href: '#campaigns', locked: !isBusinessConfigured },
+    { icon: BarChart3, label: 'Estrategias activas', href: '#strategies', locked: !isBusinessConfigured },
   ];
 
   const adminItems = [
