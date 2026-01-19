@@ -48,6 +48,7 @@ export type Database = {
         Row: {
           ad_account_id: string | null
           ad_account_name: string | null
+          analysis_data: Json | null
           business_manager_id: string | null
           business_manager_name: string | null
           created_at: string
@@ -66,6 +67,7 @@ export type Database = {
         Insert: {
           ad_account_id?: string | null
           ad_account_name?: string | null
+          analysis_data?: Json | null
           business_manager_id?: string | null
           business_manager_name?: string | null
           created_at?: string
@@ -84,6 +86,7 @@ export type Database = {
         Update: {
           ad_account_id?: string | null
           ad_account_name?: string | null
+          analysis_data?: Json | null
           business_manager_id?: string | null
           business_manager_name?: string | null
           created_at?: string

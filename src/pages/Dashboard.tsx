@@ -145,8 +145,8 @@ const Dashboard = () => {
   const menuItems = [
     { icon: LinkIcon, label: 'Conectar cuenta', href: '#connect', locked: false },
     { icon: Building2, label: 'Configurar empresa', href: '/configure-company', locked: false },
-    { icon: Megaphone, label: 'Campañas de venta', href: '#campaigns', locked: !isBusinessConfigured },
-    { icon: BarChart3, label: 'Estrategias activas', href: '#strategies', locked: !isBusinessConfigured },
+    { icon: Megaphone, label: 'Campañas de venta', href: '/campaigns', locked: !isBusinessConfigured },
+    { icon: BarChart3, label: 'Estrategias activas', href: '/strategies', locked: !isBusinessConfigured },
   ];
 
   const adminItems = [
