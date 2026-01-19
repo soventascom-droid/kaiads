@@ -158,18 +158,26 @@ const ConfigureCompany = () => {
   }, [user]);
 
   useEffect(() => {
-    const checkBusinessConfig = async () => {
+    const loadBusinessConfig = async () => {
       if (user) {
         const { data } = await supabase
           .from('business_configurations')
-          .select('is_configured')
+          .select('is_configured, analysis_data')
           .eq('user_id', user.id)
           .maybeSingle();
         
         setIsBusinessConfigured(data?.is_configured || false);
+        
+        // Load saved analysis data if exists
+        if (data?.analysis_data) {
+          setAnalysisResults(prev => ({
+            ...prev,
+            '1': data.analysis_data as unknown as AnalysisResult
+          }));
+        }
       }
     };
-    checkBusinessConfig();
+    loadBusinessConfig();
   }, [user]);
 
   // Loading animation effect
@@ -280,19 +288,29 @@ const ConfigureCompany = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
+      const analysisJson = JSON.parse(JSON.stringify(currentAccountData));
+
       if (existing) {
-        // Update existing configuration
+        // Update existing configuration with analysis data
         const { error } = await supabase
           .from('business_configurations')
-          .update({ is_configured: true, updated_at: new Date().toISOString() })
+          .update({ 
+            is_configured: true, 
+            analysis_data: analysisJson,
+            updated_at: new Date().toISOString() 
+          })
           .eq('user_id', user.id);
 
         if (error) throw error;
       } else {
-        // Insert new configuration
+        // Insert new configuration with analysis data
         const { error } = await supabase
           .from('business_configurations')
-          .insert({ user_id: user.id, is_configured: true });
+          .insert([{ 
+            user_id: user.id, 
+            is_configured: true,
+            analysis_data: analysisJson
+          }]);
 
         if (error) throw error;
       }
@@ -320,8 +338,8 @@ const ConfigureCompany = () => {
   const menuItems = [
     { icon: LinkIcon, label: 'Conectar cuenta', href: '/dashboard', locked: false },
     { icon: Building2, label: 'Configurar empresa', href: '/configure-company', locked: false, active: true },
-    { icon: Megaphone, label: 'Campañas de venta', href: '#campaigns', locked: !isBusinessConfigured },
-    { icon: BarChart3, label: 'Estrategias activas', href: '#strategies', locked: !isBusinessConfigured },
+    { icon: Megaphone, label: 'Campañas de venta', href: '/campaigns', locked: !isBusinessConfigured },
+    { icon: BarChart3, label: 'Estrategias activas', href: '/strategies', locked: !isBusinessConfigured },
   ];
 
   const adminItems = [
