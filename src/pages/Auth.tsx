@@ -72,7 +72,7 @@ const Auth = () => {
             title: '¡Bienvenido!',
             description: 'Has iniciado sesión correctamente.',
           });
-          navigate('/dashboard');
+          // Navigation will happen via useEffect when user state updates
         }
       } else {
         const result = signUpSchema.safeParse({ fullName, email, password });
@@ -102,7 +102,7 @@ const Auth = () => {
             title: '¡Cuenta creada!',
             description: 'Tu cuenta ha sido creada exitosamente.',
           });
-          navigate('/dashboard');
+          // Navigation will happen via useEffect when user state updates
         }
       }
     } catch (error) {
