@@ -270,63 +270,76 @@ const MetaAccountSlot = ({
           </div>
         </div>
 
-        {/* Extracted Data Summary - Shows immediately when connected */}
-        {isConnected && (
-          <div className="mt-4 p-4 bg-muted/30 rounded-lg border border-border/30">
-            <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-primary" />
-              Datos extraídos de Meta
-            </h4>
-            {loading ? (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Cargando activos...
+        {/* Data Extraction Info - Always visible */}
+        <div className="mt-4 p-4 bg-muted/30 rounded-lg border border-border/30">
+          <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-primary" />
+            {isConnected ? 'Datos extraídos de Meta' : 'Datos que se extraerán al conectar'}
+          </h4>
+          
+          {isConnected && loading ? (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Cargando activos...
+            </div>
+          ) : isConnected && error ? (
+            <p className="text-destructive text-sm">{error}</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className={`p-3 rounded-lg border ${isConnected && assets ? 'bg-card/50 border-border/30' : 'bg-muted/20 border-dashed border-border/50'}`}>
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <Building2 className="w-3 h-3" />
+                  <span className="text-xs">Business Managers</span>
+                </div>
+                <p className={`text-lg font-bold ${isConnected && assets ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {isConnected && assets ? assets.businesses.length : '—'}
+                </p>
               </div>
-            ) : error ? (
-              <p className="text-destructive text-sm">{error}</p>
-            ) : assets ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                <div className="bg-card/50 p-3 rounded-lg border border-border/30">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <Building2 className="w-3 h-3" />
-                    <span className="text-xs">Business Managers</span>
-                  </div>
-                  <p className="text-lg font-bold text-foreground">{assets.businesses.length}</p>
+              <div className={`p-3 rounded-lg border ${isConnected && assets ? 'bg-card/50 border-border/30' : 'bg-muted/20 border-dashed border-border/50'}`}>
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <CreditCard className="w-3 h-3" />
+                  <span className="text-xs">Cuentas Publicitarias</span>
                 </div>
-                <div className="bg-card/50 p-3 rounded-lg border border-border/30">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <CreditCard className="w-3 h-3" />
-                    <span className="text-xs">Cuentas Pub.</span>
-                  </div>
-                  <p className="text-lg font-bold text-foreground">{assets.adAccounts.length}</p>
-                </div>
-                <div className="bg-card/50 p-3 rounded-lg border border-border/30">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <FileText className="w-3 h-3" />
-                    <span className="text-xs">Páginas</span>
-                  </div>
-                  <p className="text-lg font-bold text-foreground">{assets.pages.length}</p>
-                </div>
-                <div className="bg-card/50 p-3 rounded-lg border border-border/30">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <Zap className="w-3 h-3" />
-                    <span className="text-xs">Píxeles</span>
-                  </div>
-                  <p className="text-lg font-bold text-foreground">{assets.pixels.length}</p>
-                </div>
-                <div className="bg-card/50 p-3 rounded-lg border border-border/30">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <MessageCircle className="w-3 h-3" />
-                    <span className="text-xs">WhatsApp</span>
-                  </div>
-                  <p className="text-lg font-bold text-foreground">{assets.whatsappAccounts.length}</p>
-                </div>
+                <p className={`text-lg font-bold ${isConnected && assets ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {isConnected && assets ? assets.adAccounts.length : '—'}
+                </p>
               </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">Expande la configuración para cargar los activos</p>
-            )}
-          </div>
-        )}
+              <div className={`p-3 rounded-lg border ${isConnected && assets ? 'bg-card/50 border-border/30' : 'bg-muted/20 border-dashed border-border/50'}`}>
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <FileText className="w-3 h-3" />
+                  <span className="text-xs">Páginas de Facebook</span>
+                </div>
+                <p className={`text-lg font-bold ${isConnected && assets ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {isConnected && assets ? assets.pages.length : '—'}
+                </p>
+              </div>
+              <div className={`p-3 rounded-lg border ${isConnected && assets ? 'bg-card/50 border-border/30' : 'bg-muted/20 border-dashed border-border/50'}`}>
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <Zap className="w-3 h-3" />
+                  <span className="text-xs">Píxeles de Meta</span>
+                </div>
+                <p className={`text-lg font-bold ${isConnected && assets ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {isConnected && assets ? assets.pixels.length : '—'}
+                </p>
+              </div>
+              <div className={`p-3 rounded-lg border ${isConnected && assets ? 'bg-card/50 border-border/30' : 'bg-muted/20 border-dashed border-border/50'}`}>
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <MessageCircle className="w-3 h-3" />
+                  <span className="text-xs">Cuentas WhatsApp</span>
+                </div>
+                <p className={`text-lg font-bold ${isConnected && assets ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {isConnected && assets ? assets.whatsappAccounts.length : '—'}
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {!isConnected && (
+            <p className="text-xs text-muted-foreground mt-3 italic">
+              Conecta tu cuenta de Meta Ads para ver los activos disponibles
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Collapsible Form */}
