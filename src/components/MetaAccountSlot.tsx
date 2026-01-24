@@ -88,11 +88,12 @@ const MetaAccountSlot = ({
     }
   }, [isConnected]);
 
+  // Auto-fetch assets when connected (not just when opened)
   useEffect(() => {
-    if (isConnected && isOpen && !assets) {
+    if (isConnected && !assets && !loading) {
       fetchAssets();
     }
-  }, [isConnected, isOpen]);
+  }, [isConnected]);
 
   const fetchAssets = async () => {
     setLoading(true);
@@ -268,6 +269,64 @@ const MetaAccountSlot = ({
             )}
           </div>
         </div>
+
+        {/* Extracted Data Summary - Shows immediately when connected */}
+        {isConnected && (
+          <div className="mt-4 p-4 bg-muted/30 rounded-lg border border-border/30">
+            <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" />
+              Datos extraídos de Meta
+            </h4>
+            {loading ? (
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Cargando activos...
+              </div>
+            ) : error ? (
+              <p className="text-destructive text-sm">{error}</p>
+            ) : assets ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="bg-card/50 p-3 rounded-lg border border-border/30">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <Building2 className="w-3 h-3" />
+                    <span className="text-xs">Business Managers</span>
+                  </div>
+                  <p className="text-lg font-bold text-foreground">{assets.businesses.length}</p>
+                </div>
+                <div className="bg-card/50 p-3 rounded-lg border border-border/30">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <CreditCard className="w-3 h-3" />
+                    <span className="text-xs">Cuentas Pub.</span>
+                  </div>
+                  <p className="text-lg font-bold text-foreground">{assets.adAccounts.length}</p>
+                </div>
+                <div className="bg-card/50 p-3 rounded-lg border border-border/30">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <FileText className="w-3 h-3" />
+                    <span className="text-xs">Páginas</span>
+                  </div>
+                  <p className="text-lg font-bold text-foreground">{assets.pages.length}</p>
+                </div>
+                <div className="bg-card/50 p-3 rounded-lg border border-border/30">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <Zap className="w-3 h-3" />
+                    <span className="text-xs">Píxeles</span>
+                  </div>
+                  <p className="text-lg font-bold text-foreground">{assets.pixels.length}</p>
+                </div>
+                <div className="bg-card/50 p-3 rounded-lg border border-border/30">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <MessageCircle className="w-3 h-3" />
+                    <span className="text-xs">WhatsApp</span>
+                  </div>
+                  <p className="text-lg font-bold text-foreground">{assets.whatsappAccounts.length}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">Expande la configuración para cargar los activos</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Collapsible Form */}
